@@ -21,7 +21,7 @@ export default function opencodePlugin() {
 		dependencies: [epubPluginId],
 		extension: async ctx => {
 			const html = ctx.extensions[epubPluginId].html
-			const client = createOpencodeClient()
+			const client = createOpencodeClient({ baseUrl: "http://localhost:54321" })
 
 			const providersResponse = await client.config.providers()
 			const providers = providersResponse.data?.providers
