@@ -6,7 +6,7 @@
 	"license": "MIT",
 	"type": "module",
 	"bin": {
-		"sum-pub": "./src/cli.ts"
+		"sum-pub": "./src/sum-pub.ts"
 	},
 	"exports": {
 		".": "./src/index.ts",
@@ -29,8 +29,9 @@
 	},
 	"homepage": "https://github.com/rektide/sum-pub#readme",
 	"dependencies": {
-		"epub": "^2.1.1",
-		"gunshi": "^0.12.0"
+		"@lingo-reader/epub-parser": "^0.4.6",
+		"gunshi": "^0.12.0",
+		"html-rewriter-wasm": "^0.4.1"
 	},
 	"devDependencies": {
 		"@types/node": "^25.5.0",
