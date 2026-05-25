@@ -9,7 +9,7 @@
 		"sum-pub": "./src/sum-pub.ts"
 	},
 	"exports": {
-		".": "./src/index.ts",
+		".": "./dist/index.mjs",
 		"./package.json": "./package.json"
 	},
 	"scripts": {
@@ -30,7 +30,7 @@
 	"homepage": "https://github.com/rektide/sum-pub#readme",
 	"dependencies": {
 		"@lingo-reader/epub-parser": "^0.4.6",
-		"gunshi": "^0.12.0",
+		"gunshi": "^0.32.0",
 		"html-rewriter-wasm": "^0.4.1"
 	},
 	"devDependencies": {

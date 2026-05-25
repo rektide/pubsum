@@ -16,8 +16,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6
       gunshi:
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.32.0
+        version: 0.32.0
       html-rewriter-wasm:
         specifier: ^0.4.1
         version: 0.4.1
@@ -659,10 +659,6 @@ packages:
   args-tokenizer@0.3.0:
     resolution: {integrity: sha512-xXAd7G2Mll5W8uo37GETpQ2VrE84M181Z7ugHFGQnJZ50M2mbOv0osSZ9VsSgPfJQ+LVG0prSi0th+ELMsno7Q==}
 
-  args-tokens@0.14.0:
-    resolution: {integrity: sha512-hfMDZ3CNKFt2btfachKnxazNMfzhfyD8t6WE9hVupGcfwFTdN37k9AEfY3eXJ8VdhVsmJCaV6dlKjEYpo4TAIg==}
-    engines: {node: '>= 20'}
-
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
@@ -710,9 +706,9 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  gunshi@0.12.0:
-    resolution: {integrity: sha512-1dgJoRwxe7gsInY6MTSE/YinhrFaFAfxY99BVcRRGovqbwUJim4eBTGdfvCi5Od5YZBw77MD12Xhqvzwj0j96w==}
-    engines: {node: '>= 20'}
+  gunshi@0.32.0:
+    resolution: {integrity: sha512-kvRFiIkxeiLJIE0p7reKItydbY+SKIEtveeElnot2YetMTYNN5qBH4wiuCSeir68zlDvbq0wbTdNiZflt1Y+rA==}
+    engines: {node: '>= 22'}
 
   html-rewriter-wasm@0.4.1:
     resolution: {integrity: sha512-lNovG8CMCCmcVB1Q7xggMSf7tqPCijZXaH4gL6iE8BFghdQCbaY5Met9i1x2Ex8m/cZHDUtXK9H6/znKamRP8Q==}
@@ -1381,8 +1377,6 @@ snapshots:
 
   args-tokenizer@0.3.0: {}
 
-  args-tokens@0.14.0: {}
-
   assertion-error@2.0.1: {}
 
   bumpp@11.1.0:
@@ -1418,9 +1412,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  gunshi@0.12.0:
-    dependencies:
-      args-tokens: 0.14.0
+  gunshi@0.32.0: {}
 
   html-rewriter-wasm@0.4.1: {}
 

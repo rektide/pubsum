@@ -3,6 +3,6 @@ import { realpath } from "node:fs/promises"
 
 realpath(process.argv[1]).then(resolved => {
 	if (resolved === import.meta.filename) {
-		import("./sum-pub.main.ts").then(m => m.main())
+		import("./cli.ts").then(m => m.default())
 	}
 })
