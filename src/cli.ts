@@ -1,5 +1,7 @@
 import { cli, define } from "gunshi"
 import { openEpub } from "./epub/reader.ts"
+import { opencodePlugin } from "./plugin/index.ts"
+import summarizeCommand from "./command/summarize.ts"
 
 const listCommand = define({
 	name: "list",
@@ -69,6 +71,8 @@ export default async function main() {
 		subCommands: {
 			list: listCommand,
 			read: readCommand,
+			summarize: summarizeCommand,
 		},
+		plugins: [opencodePlugin()],
 	})
 }

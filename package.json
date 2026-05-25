@@ -30,6 +30,7 @@
 	"homepage": "https://github.com/rektide/sum-pub#readme",
 	"dependencies": {
 		"@lingo-reader/epub-parser": "^0.4.6",
+		"@opencode-ai/sdk": "^1.15.10",
 		"gunshi": "^0.32.0",
 		"html-rewriter-wasm": "^0.4.1"
 	},
