@@ -1,22 +1,50 @@
 {
 	"name": "sum-pub",
-	"version": "1.0.0",
-	"description": "",
-	"main": "index.js",
+	"version": "0.1.0",
+	"description": "CLI tool to read chapters from epub files",
+	"author": "rektide de la faye",
+	"license": "MIT",
+	"type": "module",
+	"bin": {
+		"sum-pub": "./src/cli.ts"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./package.json": "./package.json"
+	},
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"build": "vp pack",
+		"dev": "vp pack --watch",
+		"test": "vp test",
+		"typecheck": "tsgo --noEmit",
+		"release": "bumpp",
+		"prepublishOnly": "pnpm run build"
 	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/rektide/sum-pub.git"
 	},
-	"keywords": [],
-	"author": "rektide de la faye",
-	"license": "MIT",
-	"type": "module",
 	"bugs": {
 		"url": "https://github.com/rektide/sum-pub/issues"
 	},
 	"homepage": "https://github.com/rektide/sum-pub#readme",
-	"module": "sum-pub.js"
+	"dependencies": {
+		"epub": "^2.1.1",
+		"gunshi": "^0.12.0"
+	},
+	"devDependencies": {
+		"@types/node": "^25.5.0",
+		"@typescript/native-preview": "7.0.0-dev.20260328.1",
+		"bumpp": "^11.0.1",
+		"typescript": "^6.0.2",
+		"vite-plus": "latest",
+		"vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+	},
+	"pnpm": {
+		"overrides": {
+			"vite": "npm:@voidzero-dev/vite-plus-core@latest",
+			"vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+		}
+	},
+	"packageManager": "pnpm@10.33.0"
 }
