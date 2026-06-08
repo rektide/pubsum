@@ -21,6 +21,9 @@ export default function opencodePlugin() {
 		dependencies: [epubPluginId, modelPluginId],
 		extension: async ctx => {
 			const html = ctx.extensions[epubPluginId].html
+			if (!html) {
+				return { client: ctx.extensions[modelPluginId].client, response: "" }
+			}
 			const { client, providerID, modelID } = ctx.extensions[modelPluginId]
 
 			const session = await client.session.create()

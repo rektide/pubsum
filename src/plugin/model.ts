@@ -14,7 +14,7 @@ function pad(str: string, len: number, char = " "): string {
 	return str.length >= len ? str : str + char.repeat(len - str.length)
 }
 
-function formatProviders(providers: Array<{ id: string; name: string; models: Record<string, unknown> }>): string {
+export function formatProviders(providers: Array<{ id: string; name: string; models: Record<string, unknown> }>): string {
 	const idWidth = Math.max(3, ...providers.map(p => p.id.length))
 	const nameWidth = Math.max(4, ...providers.map(p => p.name.length))
 	const modelsWidth = 6
@@ -27,7 +27,7 @@ function formatProviders(providers: Array<{ id: string; name: string; models: Re
 	return [header, sep, ...rows].join("\n")
 }
 
-function formatModels(providers: Array<{ id: string; models: Record<string, { id: string; name: string; limit: { context: number; output: number }; cost: { input: number; output: number } }> }>): string {
+export function formatModels(providers: Array<{ id: string; models: Record<string, { id: string; name: string; limit: { context: number; output: number }; cost: { input: number; output: number } }> }>): string {
 	const allModels = providers.flatMap(p =>
 		Object.values(p.models).map(m => ({
 			providerID: p.id,
@@ -105,16 +105,6 @@ export default function modelPlugin() {
 			const providers = providersResponse.data?.providers
 			if (!providers?.length) {
 				throw new Error("No providers available")
-			}
-
-			if (ctx.values.listProviders) {
-				process.stdout.write(formatProviders(providers) + "\n")
-				process.exit(0)
-			}
-
-			if (ctx.values.listModels) {
-				process.stdout.write(formatModels(providers) + "\n")
-				process.exit(0)
 			}
 
 			const providerArg = ctx.values.provider as string | undefined

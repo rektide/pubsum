@@ -5,7 +5,7 @@ import type { EpubBook } from "../epub/reader.ts"
 export const pluginId = "epub" as const
 
 export interface EpubExtension {
-	book: EpubBook
+	book: EpubBook | null
 	html: string
 	destroy: () => void
 }
@@ -17,19 +17,20 @@ export default function epubPlugin() {
 			ctx.addGlobalOption("file", {
 				type: "string",
 				short: "f",
-				required: true,
 				description: "epub file path",
 			})
 			ctx.addGlobalOption("chapter", {
 				type: "number",
 				short: "c",
-				required: true,
 				description: "chapter ordinal (1-based)",
 			})
 		},
 		extension: async ctx => {
-			const file = ctx.values.file as string
-			const chapter = ctx.values.chapter as number
+			const file = ctx.values.file as string | undefined
+			const chapter = ctx.values.chapter as number | undefined
+			if (!file || chapter == null) {
+				return { book: null, html: "", destroy: () => {} }
+			}
 			const book = await openEpub(file)
 			if (isNaN(chapter) || chapter < 1 || chapter > book.spine.length) {
 				throw new Error(`Invalid chapter ordinal: ${chapter}. Must be 1-${book.spine.length}`)
