@@ -47,11 +47,17 @@ export default function opencodePlugin() {
 				short: "P",
 				description: "Include existing summary when resuming session",
 			})
+			ctx.addGlobalOption("prompt", {
+				type: "string",
+				short: "q",
+				description: "Additional instructions for the summarization prompt",
+			})
 		},
 		extension: async ctx => {
 			const { client, providerID, modelID, contextLimit } = ctx.extensions[modelPluginId]
 			const resumeSessionId = ctx.values.session as string | undefined
 			const preseed = ctx.values.preseed as boolean | undefined
+			const extraPrompt = ctx.values.prompt as string | undefined
 
 			let sessionId: string | null = resumeSessionId ?? null
 
@@ -73,11 +79,15 @@ export default function opencodePlugin() {
 			const summarize = async (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string): Promise<SummarizeResult> => {
 				const sid = await ensureSession()
 
-				let prompt = ""
-				if (existingSummary && (!resumeSessionId || preseed)) {
-					prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
-				}
-				prompt += `Summarize the following chapter content. This is chapter ${chapterOrdinal} (${chapterTitle}). Use "## Chapter ${chapterOrdinal}" as the heading. Do not include any other commentary.\n\n${html}`
+			let prompt = ""
+			if (existingSummary && (!resumeSessionId || preseed)) {
+				prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
+			}
+			prompt += `Summarize the following chapter content. This is chapter ${chapterOrdinal} (${chapterTitle}). Use "## Chapter ${chapterOrdinal}" as the heading. Do not include any other commentary.\n\n`
+			if (extraPrompt) {
+				prompt += `Additional instructions: ${extraPrompt}\n\n`
+			}
+			prompt += html
 
 				const promptResponse = await client.session.prompt({
 					path: { id: sid },
