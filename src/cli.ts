@@ -99,6 +99,7 @@ const mainCommand = define<{
 		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${noProactiveLimit ? "none (reactive only)" : formatNumber(contextLimit) + " tokens"}\n`)
 
 		try {
+			let prevTotal = 0
 			for (const ordinal of ordinals) {
 				if (!noProactiveLimit) {
 					const usageBefore = await oc.getSessionUsage()
@@ -106,6 +107,7 @@ const mainCommand = define<{
 					if (totalBefore >= contextLimit) {
 						process.stderr.write(`\n  Context limit reached (${formatNumber(totalBefore)} / ${formatNumber(contextLimit)}), rotating session\n`)
 						oc.resetSession()
+						prevTotal = 0
 					}
 				}
 
@@ -125,6 +127,14 @@ const mainCommand = define<{
 					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
 				}
 
+				const total = result.usage.input + result.usage.cacheRead
+				if (prevTotal > 0 && total < prevTotal * 0.5) {
+					process.stderr.write(`\n  COMPACTION DETECTED: ${formatNumber(prevTotal)} → ${formatNumber(total)} tokens. Redoing chapter in fresh session.\n`)
+					oc.resetSession()
+					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
+				}
+				prevTotal = result.usage.input + result.usage.cacheRead
+
 				const entry = result.response + "\n\n"
 				inMemorySummary += entry
 
@@ -136,11 +146,11 @@ const mainCommand = define<{
 				}
 
 				if (result.usage) {
-					const total = result.usage.input + result.usage.cacheRead
+					const t = result.usage.input + result.usage.cacheRead
 					const limitDisplay = noProactiveLimit ? oc.contextLimit : contextLimit
-					const pct = limitDisplay > 0 && limitDisplay !== Infinity ? ((total / limitDisplay) * 100).toFixed(1) : "?"
+					const pct = limitDisplay > 0 && limitDisplay !== Infinity ? ((t / limitDisplay) * 100).toFixed(1) : "?"
 					process.stderr.write(
-						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(limitDisplay)} (${pct}%)`
+						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(t)} / ${formatNumber(limitDisplay)} (${pct}%)`
 					)
 				}
 				process.stderr.write("\n")
