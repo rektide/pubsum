@@ -1,11 +1,11 @@
 import { cli, define } from "gunshi"
-import { appendFile } from "node:fs/promises"
 import epubPlugin from "./plugin/epub.ts"
 import modelPlugin, { formatProviders, formatModels } from "./plugin/model.ts"
 import opencodePlugin from "./plugin/opencode.ts"
 import { pluginId as opencodePluginId } from "./plugin/opencode.ts"
 import { pluginId as modelPluginId } from "./plugin/model.ts"
 import { pluginId as epubPluginId } from "./plugin/epub.ts"
+import { SumPubState } from "./sum-pub/state.ts"
 import type { OpencodeExtension } from "./plugin/opencode.ts"
 import type { EpubExtension } from "./plugin/epub.ts"
 import type { ModelExtension } from "./plugin/model.ts"
@@ -14,10 +14,6 @@ type Extensions = {
 	[opencodePluginId]: OpencodeExtension
 	[modelPluginId]: ModelExtension
 	[epubPluginId]: EpubExtension
-}
-
-function formatNumber(n: number): string {
-	return n.toLocaleString()
 }
 
 function parseOrdinals(input: string): number[] {
@@ -91,72 +87,32 @@ const mainCommand = define<{
 		}
 
 		const ordinals = parseOrdinals(chaptersArg)
-		let inMemorySummary = epub.existingSummary
 		const userLimit = ctx.values.contextLimit as number | undefined
-		const noProactiveLimit = userLimit == null || userLimit === 0
-		const contextLimit = noProactiveLimit ? Infinity : userLimit
+		const contextLimit = userLimit == null || userLimit === 0 ? Infinity : userLimit
+		const noLimit = contextLimit === Infinity
 
-		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${noProactiveLimit ? "none (reactive only)" : formatNumber(contextLimit) + " tokens"}\n`)
+		const state = new SumPubState(
+			epub.bookTitle,
+			epub.existingSummary,
+			oc.sessionId,
+			{ outputPath, contextLimit, modelContextLimit: oc.contextLimit },
+			{
+				loadChapter: epub.loadChapter,
+				destroyBook: epub.destroy,
+				summarize: oc.summarize,
+				getSessionUsage: oc.getSessionUsage,
+				resetSession: oc.resetSession,
+			},
+		)
+
+		process.stderr.write(`${state.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${noLimit ? "none (reactive only)" : contextLimit.toLocaleString() + " tokens"}\n`)
 
 		try {
-			let prevTotal = 0
 			for (const ordinal of ordinals) {
-				if (!noProactiveLimit) {
-					const usageBefore = await oc.getSessionUsage()
-					const totalBefore = usageBefore.input + usageBefore.cacheRead
-					if (totalBefore >= contextLimit) {
-						process.stderr.write(`\n  Context limit reached (${formatNumber(totalBefore)} / ${formatNumber(contextLimit)}), rotating session\n`)
-						oc.resetSession()
-						prevTotal = 0
-					}
-				}
-
-				process.stderr.write(`\nChapter ${ordinal}... `)
-
-				const chapter = await epub.loadChapter(ordinal)
-
-				let result
-				try {
-					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
-				} catch (err) {
-					const msg = err instanceof Error ? err.message : String(err)
-					const stack = err instanceof Error ? err.stack : ""
-					process.stderr.write(`\n  ERROR: ${msg}\n  ${stack}\n`)
-					oc.resetSession()
-					process.stderr.write(`  Retrying in new session...\n`)
-					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
-				}
-
-				const total = result.usage.input + result.usage.cacheRead
-				if (prevTotal > 0 && total < prevTotal * 0.5) {
-					process.stderr.write(`\n  COMPACTION DETECTED: ${formatNumber(prevTotal)} → ${formatNumber(total)} tokens. Redoing chapter in fresh session.\n`)
-					oc.resetSession()
-					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
-				}
-				prevTotal = result.usage.input + result.usage.cacheRead
-
-				const entry = result.response + "\n\n"
-				inMemorySummary += entry
-
-				if (outputPath) {
-					await appendFile(outputPath, entry)
-					process.stderr.write(`appended to ${outputPath}`)
-				} else {
-					process.stdout.write(result.response + "\n")
-				}
-
-				if (result.usage) {
-					const t = result.usage.input + result.usage.cacheRead
-					const limitDisplay = noProactiveLimit ? oc.contextLimit : contextLimit
-					const pct = limitDisplay > 0 && limitDisplay !== Infinity ? ((t / limitDisplay) * 100).toFixed(1) : "?"
-					process.stderr.write(
-						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(t)} / ${formatNumber(limitDisplay)} (${pct}%)`
-					)
-				}
-				process.stderr.write("\n")
+				await state.processChapter(ordinal)
 			}
 		} finally {
-			epub.destroy()
+			state.destroy()
 		}
 	},
 })
