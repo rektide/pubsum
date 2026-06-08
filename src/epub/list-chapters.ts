@@ -1,7 +1,7 @@
 import type { EpubBook, EpubToc } from "./reader.ts"
 import type { PageList } from "@lingo-reader/epub-parser"
 
-function buildTocLabelMap(toc: EpubToc): Map<string, string> {
+export function buildTocLabelMap(toc: EpubToc): Map<string, string> {
 	const map = new Map<string, string>()
 	const walk = (entries: EpubToc) => {
 		for (const entry of entries) {

@@ -1,6 +1,7 @@
 import { plugin } from "gunshi/plugin"
 import { readFile } from "node:fs/promises"
 import { openEpub } from "../epub/reader.ts"
+import { buildTocLabelMap } from "../epub/list-chapters.ts"
 import type { EpubBook, EpubToc, EpubGuide, PageList } from "../epub/reader.ts"
 
 export const pluginId = "epub" as const
@@ -79,6 +80,7 @@ export default function epubPlugin() {
 			}
 
 			const book = await openEpub(file)
+			const tocLabels = buildTocLabelMap(book.toc)
 
 			const loadChapter = async (ordinal: number): Promise<ChapterContent> => {
 				if (ordinal < 1 || ordinal > book.spine.length) {
@@ -89,9 +91,12 @@ export default function epubPlugin() {
 				if (!loaded) {
 					throw new Error(`Failed to load chapter ${ordinal}`)
 				}
+				const href = spineItem.href
+				const tocLabel = tocLabels.get(href) ?? tocLabels.get(href.split("/").pop() ?? "")
+				const hrefLabel = href.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${ordinal}`
 				return {
 					html: loaded.html,
-					title: spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${ordinal}`,
+					title: tocLabel ?? hrefLabel,
 				}
 			}
 
