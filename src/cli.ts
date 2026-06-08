@@ -51,12 +51,10 @@ const mainCommand = define<{
 		}
 
 		const ext = ctx.extensions[opencodePluginId]
-		const epub = ctx.extensions.epub
 		const outputPath = ctx.values.output as string | undefined
 
 		if (outputPath) {
-			const heading = `## ${epub.chapterTitle}\n\n`
-			const content = heading + ext.response + "\n\n"
+			const content = ext.response + "\n\n"
 			await appendFile(outputPath, content)
 			process.stderr.write(`Appended to ${outputPath}\n`)
 		} else {

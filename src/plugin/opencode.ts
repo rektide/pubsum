@@ -31,6 +31,7 @@ export default function opencodePlugin() {
 		dependencies: [epubPluginId, modelPluginId],
 		extension: async ctx => {
 			const html = ctx.extensions[epubPluginId].html
+			const existingSummary = ctx.extensions[epubPluginId].existingSummary
 			const { client, providerID, modelID, contextLimit } = ctx.extensions[modelPluginId]
 			if (!html) {
 				return { client, response: "", usage: null, contextLimit }
@@ -42,13 +43,19 @@ export default function opencodePlugin() {
 				throw new Error("Failed to create session")
 			}
 
+			let prompt = ""
+			if (existingSummary) {
+				prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
+			}
+			prompt += `Summarize the following chapter content. Use a ## heading with the chapter title. Do not include any other commentary.\n\n${html}`
+
 			const promptResponse = await client.session.prompt({
 				path: { id: sessionId },
 				body: {
 					parts: [
 						{
 							type: "text",
-							text: `Please summarize the following chapter content:\n\n${html}`,
+							text: prompt,
 						},
 					],
 					model: {

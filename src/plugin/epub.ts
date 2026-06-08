@@ -1,4 +1,5 @@
 import { plugin } from "gunshi/plugin"
+import { readFile } from "node:fs/promises"
 import { openEpub } from "../epub/reader.ts"
 import type { EpubBook } from "../epub/reader.ts"
 
@@ -9,6 +10,7 @@ export interface EpubExtension {
 	html: string
 	chapterTitle: string
 	bookTitle: string
+	existingSummary: string
 	destroy: () => void
 }
 
@@ -35,8 +37,19 @@ export default function epubPlugin() {
 		extension: async ctx => {
 			const file = ctx.values.file as string | undefined
 			const chapter = ctx.values.chapter as number | undefined
+			const outputPath = ctx.values.output as string | undefined
+
+			let existingSummary = ""
+			if (outputPath) {
+				try {
+					existingSummary = await readFile(outputPath, "utf-8")
+				} catch {
+					existingSummary = ""
+				}
+			}
+
 			if (!file || chapter == null) {
-				return { book: null, html: "", chapterTitle: "", bookTitle: "", destroy: () => {} }
+				return { book: null, html: "", chapterTitle: "", bookTitle: "", existingSummary, destroy: () => {} }
 			}
 			const book = await openEpub(file)
 			if (isNaN(chapter) || chapter < 1 || chapter > book.spine.length) {
@@ -52,6 +65,7 @@ export default function epubPlugin() {
 				html: loaded.html,
 				chapterTitle: spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${chapter}`,
 				bookTitle: book.metadata.title ?? "",
+				existingSummary,
 				destroy: () => book.destroy(),
 			}
 		},
