@@ -1,39 +1,27 @@
 import { plugin } from "gunshi/plugin"
-import { createOpencodeClient } from "@opencode-ai/sdk"
-import type { OpencodeClient } from "@opencode-ai/sdk"
 import { pluginId as epubPluginId } from "./epub.ts"
 import type { EpubExtension } from "./epub.ts"
+import { pluginId as modelPluginId } from "./model.ts"
+import type { ModelExtension } from "./model.ts"
 
 export const pluginId = "opencode" as const
 
 type DependencyExtensions = {
 	[epubPluginId]: EpubExtension
+	[modelPluginId]: ModelExtension
 }
 
 export interface OpencodeExtension {
-	client: OpencodeClient
 	response: string
 }
 
 export default function opencodePlugin() {
-	return plugin<DependencyExtensions, typeof pluginId, [typeof epubPluginId], OpencodeExtension>({
+	return plugin<DependencyExtensions, typeof pluginId, [typeof epubPluginId, typeof modelPluginId], OpencodeExtension>({
 		id: pluginId,
-		dependencies: [epubPluginId],
+		dependencies: [epubPluginId, modelPluginId],
 		extension: async ctx => {
 			const html = ctx.extensions[epubPluginId].html
-			const client = createOpencodeClient({ baseUrl: "http://localhost:4096" })
-
-			const providersResponse = await client.config.providers()
-			const providers = providersResponse.data?.providers
-			if (!providers?.length) {
-				throw new Error("No providers available")
-			}
-
-			const provider = providers[0]
-			const modelId = Object.keys(provider.models)[0]
-			if (!modelId) {
-				throw new Error("No models available")
-			}
+			const { client, providerID, modelID } = ctx.extensions[modelPluginId]
 
 			const session = await client.session.create()
 			const sessionId = session.data?.id
@@ -51,8 +39,8 @@ export default function opencodePlugin() {
 						},
 					],
 					model: {
-						providerID: provider.id,
-						modelID: modelId,
+						providerID,
+						modelID,
 					},
 				},
 			})
@@ -63,7 +51,7 @@ export default function opencodePlugin() {
 				.map(p => ("text" in p ? String(p.text) : ""))
 				.join("\n") ?? ""
 
-			return { client, response }
+			return { response }
 		},
 	})
 }

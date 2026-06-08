@@ -1,4 +1,6 @@
 export { default as epubPlugin, pluginId as epubPluginId } from "./epub.ts"
 export type { EpubExtension } from "./epub.ts"
-export { default as opencodePlugin, pluginId } from "./opencode.ts"
+export { default as modelPlugin, pluginId as modelPluginId } from "./model.ts"
+export type { ModelExtension } from "./model.ts"
+export { default as opencodePlugin, pluginId as opencodePluginId } from "./opencode.ts"
 export type { OpencodeExtension } from "./opencode.ts"
