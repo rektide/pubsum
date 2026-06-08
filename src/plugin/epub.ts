@@ -5,12 +5,17 @@ import type { EpubBook } from "../epub/reader.ts"
 
 export const pluginId = "epub" as const
 
+export interface ChapterContent {
+	html: string
+	title: string
+}
+
 export interface EpubExtension {
 	book: EpubBook | null
-	html: string
-	chapterTitle: string
 	bookTitle: string
 	existingSummary: string
+	spineLength: number
+	loadChapter: (ordinal: number) => Promise<ChapterContent>
 	destroy: () => void
 }
 
@@ -23,20 +28,19 @@ export default function epubPlugin() {
 				short: "f",
 				description: "epub file path",
 			})
-			ctx.addGlobalOption("chapter", {
-				type: "number",
+			ctx.addGlobalOption("chapters", {
+				type: "string",
 				short: "c",
-				description: "chapter ordinal (1-based)",
+				description: "Chapter(s): single (5), range (5-8), or list (5,6,7)",
 			})
 			ctx.addGlobalOption("output", {
 				type: "string",
 				short: "o",
-				description: "Append summary to markdown file",
+				description: "Append summaries to markdown file",
 			})
 		},
 		extension: async ctx => {
 			const file = ctx.values.file as string | undefined
-			const chapter = ctx.values.chapter as number | undefined
 			const outputPath = ctx.values.output as string | undefined
 
 			let existingSummary = ""
@@ -48,24 +52,40 @@ export default function epubPlugin() {
 				}
 			}
 
-			if (!file || chapter == null) {
-				return { book: null, html: "", chapterTitle: "", bookTitle: "", existingSummary, destroy: () => {} }
+			if (!file) {
+				return {
+					book: null,
+					bookTitle: "",
+					existingSummary,
+					spineLength: 0,
+					loadChapter: async () => ({ html: "", title: "" }),
+					destroy: () => {},
+				}
 			}
+
 			const book = await openEpub(file)
-			if (isNaN(chapter) || chapter < 1 || chapter > book.spine.length) {
-				throw new Error(`Invalid chapter ordinal: ${chapter}. Must be 1-${book.spine.length}`)
+
+			const loadChapter = async (ordinal: number): Promise<ChapterContent> => {
+				if (ordinal < 1 || ordinal > book.spine.length) {
+					throw new Error(`Invalid chapter ordinal: ${ordinal}. Must be 1-${book.spine.length}`)
+				}
+				const spineItem = book.spine[ordinal - 1]
+				const loaded = await book.loadChapter(spineItem.id)
+				if (!loaded) {
+					throw new Error(`Failed to load chapter ${ordinal}`)
+				}
+				return {
+					html: loaded.html,
+					title: spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${ordinal}`,
+				}
 			}
-			const spineItem = book.spine[chapter - 1]
-			const loaded = await book.loadChapter(spineItem.id)
-			if (!loaded) {
-				throw new Error("Failed to load chapter content")
-			}
+
 			return {
 				book,
-				html: loaded.html,
-				chapterTitle: spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${chapter}`,
 				bookTitle: book.metadata.title ?? "",
 				existingSummary,
+				spineLength: book.spine.length,
+				loadChapter,
 				destroy: () => book.destroy(),
 			}
 		},

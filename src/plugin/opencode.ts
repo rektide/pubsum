@@ -14,15 +14,21 @@ export interface TokenUsage {
 	cacheWrite: number
 }
 
+export interface SummarizeResult {
+	response: string
+	usage: TokenUsage
+}
+
 type DependencyExtensions = {
 	[epubPluginId]: EpubExtension
 	[modelPluginId]: ModelExtension
 }
 
 export interface OpencodeExtension {
-	response: string
-	usage: TokenUsage | null
 	contextLimit: number
+	sessionId: string | null
+	summarize: (html: string, chapterTitle: string, existingSummary: string) => Promise<SummarizeResult>
+	getSessionUsage: () => Promise<TokenUsage>
 }
 
 export default function opencodePlugin() {
@@ -30,61 +36,67 @@ export default function opencodePlugin() {
 		id: pluginId,
 		dependencies: [epubPluginId, modelPluginId],
 		extension: async ctx => {
-			const html = ctx.extensions[epubPluginId].html
-			const existingSummary = ctx.extensions[epubPluginId].existingSummary
 			const { client, providerID, modelID, contextLimit } = ctx.extensions[modelPluginId]
-			if (!html) {
-				return { client, response: "", usage: null, contextLimit }
-			}
 
-			const session = await client.session.create()
-			const sessionId = session.data?.id
-			if (!sessionId) {
-				throw new Error("Failed to create session")
-			}
+			let sessionId: string | null = null
 
-			let prompt = ""
-			if (existingSummary) {
-				prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
-			}
-			prompt += `Summarize the following chapter content. Use a ## heading with the chapter title. Do not include any other commentary.\n\n${html}`
-
-			const promptResponse = await client.session.prompt({
-				path: { id: sessionId },
-				body: {
-					parts: [
-						{
-							type: "text",
-							text: prompt,
-						},
-					],
-					model: {
-						providerID,
-						modelID,
-					},
-				},
-			})
-
-			const parts = promptResponse.data?.parts
-			const response = parts
-				?.filter(p => p.type === "text")
-				.map(p => ("text" in p ? String(p.text) : ""))
-				.join("\n") ?? ""
-
-			const messages = await client.session.messages({ path: { id: sessionId } })
-			const usage: TokenUsage = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
-			for (const msg of messages.data ?? []) {
-				if (msg.info.role === "assistant" && "tokens" in msg.info) {
-					const t = (msg.info as { tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number } } }).tokens
-					usage.input += t.input
-					usage.output += t.output
-					usage.reasoning += t.reasoning
-					usage.cacheRead += t.cache.read
-					usage.cacheWrite += t.cache.write
+			const ensureSession = async (): Promise<string> => {
+				if (sessionId) return sessionId
+				const session = await client.session.create()
+				sessionId = session.data?.id ?? null
+				if (!sessionId) {
+					throw new Error("Failed to create session")
 				}
+				return sessionId
 			}
 
-			return { response, usage, contextLimit }
+			const summarize = async (html: string, chapterTitle: string, existingSummary: string): Promise<SummarizeResult> => {
+				const sid = await ensureSession()
+
+				let prompt = ""
+				if (existingSummary) {
+					prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
+				}
+				prompt += `Summarize the following chapter content. Use a ## heading with the chapter title. Do not include any other commentary.\n\n${html}`
+
+				const promptResponse = await client.session.prompt({
+					path: { id: sid },
+					body: {
+						parts: [{ type: "text", text: prompt }],
+						model: { providerID, modelID },
+					},
+				})
+
+				const parts = promptResponse.data?.parts
+				const response = parts
+					?.filter(p => p.type === "text")
+					.map(p => ("text" in p ? String(p.text) : ""))
+					.join("\n") ?? ""
+
+				const usage = await getSessionUsage()
+				return { response, usage }
+			}
+
+			const getSessionUsage = async (): Promise<TokenUsage> => {
+				if (!sessionId) {
+					return { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
+				}
+				const messages = await client.session.messages({ path: { id: sessionId } })
+				const usage: TokenUsage = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
+				for (const msg of messages.data ?? []) {
+					if (msg.info.role === "assistant" && "tokens" in msg.info) {
+						const t = (msg.info as { tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number } } }).tokens
+						usage.input += t.input
+						usage.output += t.output
+						usage.reasoning += t.reasoning
+						usage.cacheRead += t.cache.read
+						usage.cacheWrite += t.cache.write
+					}
+				}
+				return usage
+			}
+
+			return { contextLimit, sessionId, summarize, getSessionUsage }
 		},
 	})
 }
