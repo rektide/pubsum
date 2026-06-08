@@ -14,20 +14,38 @@ function pad(str: string, len: number, char = " "): string {
 	return str.length >= len ? str : str + char.repeat(len - str.length)
 }
 
-export function formatProviders(providers: Array<{ id: string; name: string; models: Record<string, unknown> }>): string {
+export function formatProviders(
+	providers: Array<{ id: string; name: string; models: Record<string, unknown> }>,
+	defaults: Record<string, string>,
+): string {
 	const idWidth = Math.max(3, ...providers.map(p => p.id.length))
 	const nameWidth = Math.max(4, ...providers.map(p => p.name.length))
 	const modelsWidth = 6
+	const defaultWidth = Math.max(7, ...providers.map(p => (defaults[p.id] ?? "").length))
 
-	const header = `${pad("ID", idWidth)}  ${pad("Name", nameWidth)}  ${pad("Models", modelsWidth)}`
-	const sep = `${pad("", idWidth, "-")}  ${pad("", nameWidth, "-")}  ${pad("", modelsWidth, "-")}`
+	const header = `${pad("ID", idWidth)}  ${pad("Name", nameWidth)}  ${pad("Models", modelsWidth)}  ${pad("Default", defaultWidth)}`
+	const sep = `${pad("", idWidth, "-")}  ${pad("", nameWidth, "-")}  ${pad("", modelsWidth, "-")}  ${pad("", defaultWidth, "-")}`
 	const rows = providers.map(p =>
-		`${pad(p.id, idWidth)}  ${pad(p.name, nameWidth)}  ${String(Object.keys(p.models).length)}`
+		`${pad(p.id, idWidth)}  ${pad(p.name, nameWidth)}  ${String(Object.keys(p.models).length).padStart(modelsWidth)}  ${pad(defaults[p.id] ?? "", defaultWidth)}`
 	)
 	return [header, sep, ...rows].join("\n")
 }
 
-export function formatModels(providers: Array<{ id: string; models: Record<string, { id: string; name: string; limit: { context: number; output: number }; cost: { input: number; output: number } }> }>): string {
+interface ModelEntry {
+	id: string
+	name: string
+	limit: { context: number; output: number }
+	cost?: { input: number; output: number }
+}
+
+export function formatModels(
+	providers: Array<{ id: string; models: Record<string, ModelEntry> }>,
+	defaults: Record<string, string>,
+): string {
+	const defaultSet = new Set(
+		providers.map(p => `${p.id}/${defaults[p.id] ?? ""}`)
+	)
+
 	const allModels = providers.flatMap(p =>
 		Object.values(p.models).map(m => ({
 			providerID: p.id,
@@ -35,8 +53,9 @@ export function formatModels(providers: Array<{ id: string; models: Record<strin
 			name: m.name,
 			context: m.limit.context,
 			output: m.limit.output,
-			costInput: m.cost.input,
-			costOutput: m.cost.output,
+			costInput: m.cost?.input ?? 0,
+			costOutput: m.cost?.output ?? 0,
+			isDefault: defaultSet.has(`${p.id}/${m.id}`),
 		}))
 	)
 
@@ -46,6 +65,7 @@ export function formatModels(providers: Array<{ id: string; models: Record<strin
 	const outWidth = 6
 	const costInWidth = 9
 	const costOutWidth = 10
+	const flagWidth = 7
 
 	const header = [
 		pad("Provider/Model", slugWidth),
@@ -54,6 +74,7 @@ export function formatModels(providers: Array<{ id: string; models: Record<strin
 		pad("Output", outWidth),
 		pad("Cost In", costInWidth),
 		pad("Cost Out", costOutWidth),
+		pad("Default", flagWidth),
 	].join("  ")
 	const sep = [
 		pad("", slugWidth, "-"),
@@ -62,6 +83,7 @@ export function formatModels(providers: Array<{ id: string; models: Record<strin
 		pad("", outWidth, "-"),
 		pad("", costInWidth, "-"),
 		pad("", costOutWidth, "-"),
+		pad("", flagWidth, "-"),
 	].join("  ")
 	const rows = allModels.map(m => [
 		pad(`${m.providerID}/${m.id}`, slugWidth),
@@ -70,6 +92,7 @@ export function formatModels(providers: Array<{ id: string; models: Record<strin
 		pad(String(m.output), outWidth),
 		pad(`$${m.costInput}/M`, costInWidth),
 		pad(`$${m.costOutput}/M`, costOutWidth),
+		pad(m.isDefault ? "<--" : "", flagWidth),
 	].join("  "))
 	return [header, sep, ...rows].join("\n")
 }
@@ -81,12 +104,12 @@ export default function modelPlugin() {
 			ctx.addGlobalOption("listProviders", {
 				type: "boolean",
 				short: "l",
-				description: "List available providers and exit",
+				description: "List connected providers and exit",
 			})
 			ctx.addGlobalOption("listModels", {
 				type: "boolean",
 				short: "m",
-				description: "List available models with context limits and exit",
+				description: "List models for connected providers and exit",
 			})
 			ctx.addGlobalOption("provider", {
 				type: "string",

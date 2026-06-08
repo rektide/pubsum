@@ -23,20 +23,24 @@ const mainCommand = define<{
 	run: async ctx => {
 		if (ctx.values.listProviders) {
 			const client = ctx.extensions[modelPluginId].client
-			const resp = await client.config.providers()
-			const providers = resp.data?.providers
-			if (providers?.length) {
-				process.stdout.write(formatProviders(providers) + "\n")
+			const resp = await client.provider.list()
+			const connected = resp.data?.connected ?? []
+			const defaults = resp.data?.default ?? {}
+			const providers = (resp.data?.all ?? []).filter(p => connected.includes(p.id))
+			if (providers.length) {
+				process.stdout.write(formatProviders(providers, defaults) + "\n")
 			}
 			return
 		}
 
 		if (ctx.values.listModels) {
 			const client = ctx.extensions[modelPluginId].client
-			const resp = await client.config.providers()
-			const providers = resp.data?.providers
-			if (providers?.length) {
-				process.stdout.write(formatModels(providers) + "\n")
+			const resp = await client.provider.list()
+			const connected = resp.data?.connected ?? []
+			const defaults = resp.data?.default ?? {}
+			const providers = (resp.data?.all ?? []).filter(p => connected.includes(p.id))
+			if (providers.length) {
+				process.stdout.write(formatModels(providers, defaults) + "\n")
 			}
 			return
 		}
