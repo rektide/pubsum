@@ -9,6 +9,7 @@ import { SumPubState } from "./sum-pub/state.ts"
 import type { OpencodeExtension } from "./plugin/opencode.ts"
 import type { EpubExtension } from "./plugin/epub.ts"
 import type { ModelExtension } from "./plugin/model.ts"
+import type { EpubToc } from "./epub/reader.ts"
 
 type Extensions = {
 	[opencodePluginId]: OpencodeExtension
@@ -82,10 +83,38 @@ const mainCommand = define<{
 				process.stderr.write("Error: --list-chapters requires -f <epub>\n")
 				process.exit(1)
 			}
+			const hrefToTocLabel = new Map<string, string>()
+			const walkToc = (entries: EpubToc) => {
+				for (const entry of entries) {
+					const href = entry.href.split("#")[0]
+					hrefToTocLabel.set(href, entry.label)
+					if (entry.children) walkToc(entry.children)
+				}
+			}
+			walkToc(epub.toc)
+			const hrefToPages = new Map<string, string[]>()
+			for (const pt of epub.pageList.pageTargets) {
+				const href = pt.href.split("#")[0]
+				let pages = hrefToPages.get(href)
+				if (!pages) {
+					pages = []
+					hrefToPages.set(href, pages)
+				}
+				pages.push(pt.value)
+			}
 			for (let i = 0; i < epub.spineLength; i++) {
 				const spineItem = epub.book!.spine[i]
-				const title = spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${i + 1}`
-				process.stdout.write(`  ${i + 1}. ${title}\n`)
+				const href = spineItem.href
+				const tocLabel = hrefToTocLabel.get(href) ?? hrefToTocLabel.get(href.split("/").pop() ?? "")
+				const hrefLabel = href.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${i + 1}`
+				const title = tocLabel ?? hrefLabel
+				const flags: string[] = []
+				if (spineItem.properties) flags.push(spineItem.properties)
+				if (spineItem.linear === "no") flags.push("non-linear")
+				const pages = hrefToPages.get(href)
+				const pageInfo = pages?.length ? ` (${pages.length}p)` : ""
+				const flagStr = flags.length ? ` [${flags.join(", ")}]` : ""
+				process.stdout.write(`  ${i + 1}. ${title}${flagStr}${pageInfo}\n`)
 			}
 			return
 		}

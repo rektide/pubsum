@@ -1,7 +1,7 @@
 import { plugin } from "gunshi/plugin"
 import { readFile } from "node:fs/promises"
 import { openEpub } from "../epub/reader.ts"
-import type { EpubBook } from "../epub/reader.ts"
+import type { EpubBook, EpubToc, EpubGuide, PageList } from "../epub/reader.ts"
 
 export const pluginId = "epub" as const
 
@@ -15,6 +15,9 @@ export interface EpubExtension {
 	bookTitle: string
 	existingSummary: string
 	spineLength: number
+	toc: EpubToc
+	guide: EpubGuide
+	pageList: PageList
 	loadChapter: (ordinal: number) => Promise<ChapterContent>
 	destroy: () => void
 }
@@ -67,6 +70,9 @@ export default function epubPlugin() {
 					bookTitle: "",
 					existingSummary,
 					spineLength: 0,
+					toc: [],
+					guide: [],
+					pageList: { label: "", pageTargets: [] },
 					loadChapter: async () => ({ html: "", title: "" }),
 					destroy: () => {},
 				}
@@ -94,6 +100,9 @@ export default function epubPlugin() {
 				bookTitle: book.metadata.title ?? "",
 				existingSummary,
 				spineLength: book.spine.length,
+				toc: book.toc,
+				guide: book.guide,
+				pageList: book.pageList,
 				loadChapter,
 				destroy: () => book.destroy(),
 			}
