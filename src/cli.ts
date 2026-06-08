@@ -1,4 +1,5 @@
 import { cli, define } from "gunshi"
+import { appendFile } from "node:fs/promises"
 import epubPlugin from "./plugin/epub.ts"
 import modelPlugin, { formatProviders, formatModels } from "./plugin/model.ts"
 import opencodePlugin from "./plugin/opencode.ts"
@@ -50,7 +51,17 @@ const mainCommand = define<{
 		}
 
 		const ext = ctx.extensions[opencodePluginId]
-		process.stdout.write(ext.response)
+		const epub = ctx.extensions.epub
+		const outputPath = ctx.values.output as string | undefined
+
+		if (outputPath) {
+			const heading = `## ${epub.chapterTitle}\n\n`
+			const content = heading + ext.response + "\n\n"
+			await appendFile(outputPath, content)
+			process.stderr.write(`Appended to ${outputPath}\n`)
+		} else {
+			process.stdout.write(ext.response)
+		}
 
 		if (ext.usage) {
 			const total = ext.usage.input + ext.usage.cacheRead

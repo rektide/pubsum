@@ -7,6 +7,8 @@ export const pluginId = "epub" as const
 export interface EpubExtension {
 	book: EpubBook | null
 	html: string
+	chapterTitle: string
+	bookTitle: string
 	destroy: () => void
 }
 
@@ -24,24 +26,32 @@ export default function epubPlugin() {
 				short: "c",
 				description: "chapter ordinal (1-based)",
 			})
+			ctx.addGlobalOption("output", {
+				type: "string",
+				short: "o",
+				description: "Append summary to markdown file",
+			})
 		},
 		extension: async ctx => {
 			const file = ctx.values.file as string | undefined
 			const chapter = ctx.values.chapter as number | undefined
 			if (!file || chapter == null) {
-				return { book: null, html: "", destroy: () => {} }
+				return { book: null, html: "", chapterTitle: "", bookTitle: "", destroy: () => {} }
 			}
 			const book = await openEpub(file)
 			if (isNaN(chapter) || chapter < 1 || chapter > book.spine.length) {
 				throw new Error(`Invalid chapter ordinal: ${chapter}. Must be 1-${book.spine.length}`)
 			}
-			const loaded = await book.loadChapter(book.spine[chapter - 1].id)
+			const spineItem = book.spine[chapter - 1]
+			const loaded = await book.loadChapter(spineItem.id)
 			if (!loaded) {
 				throw new Error("Failed to load chapter content")
 			}
 			return {
 				book,
 				html: loaded.html,
+				chapterTitle: spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${chapter}`,
+				bookTitle: book.metadata.title ?? "",
 				destroy: () => book.destroy(),
 			}
 		},
