@@ -18,16 +18,18 @@ function pad(str: string, len: number, char = " "): string {
 export function formatProviders(
 	providers: Array<{ id: string; name: string; models: Record<string, unknown> }>,
 	defaults: Record<string, string>,
+	activeIndex: number,
 ): string {
 	const idWidth = Math.max(3, ...providers.map(p => p.id.length))
 	const nameWidth = Math.max(4, ...providers.map(p => p.name.length))
 	const modelsWidth = 6
 	const defaultWidth = Math.max(7, ...providers.map(p => (defaults[p.id] ?? "").length))
+	const flagWidth = 7
 
-	const header = `${pad("ID", idWidth)}  ${pad("Name", nameWidth)}  ${pad("Models", modelsWidth)}  ${pad("Default", defaultWidth)}`
-	const sep = `${pad("", idWidth, "-")}  ${pad("", nameWidth, "-")}  ${pad("", modelsWidth, "-")}  ${pad("", defaultWidth, "-")}`
-	const rows = providers.map(p =>
-		`${pad(p.id, idWidth)}  ${pad(p.name, nameWidth)}  ${String(Object.keys(p.models).length).padStart(modelsWidth)}  ${pad(defaults[p.id] ?? "", defaultWidth)}`
+	const header = `${pad("ID", idWidth)}  ${pad("Name", nameWidth)}  ${pad("Models", modelsWidth)}  ${pad("Default", defaultWidth)}  ${pad("Active", flagWidth)}`
+	const sep = `${pad("", idWidth, "-")}  ${pad("", nameWidth, "-")}  ${pad("", modelsWidth, "-")}  ${pad("", defaultWidth, "-")}  ${pad("", flagWidth, "-")}`
+	const rows = providers.map((p, i) =>
+		`${pad(p.id, idWidth)}  ${pad(p.name, nameWidth)}  ${String(Object.keys(p.models).length).padStart(modelsWidth)}  ${pad(defaults[p.id] ?? "", defaultWidth)}  ${pad(i === activeIndex ? "<--" : "", flagWidth)}`
 	)
 	return [header, sep, ...rows].join("\n")
 }

@@ -59,8 +59,11 @@ const mainCommand = define<{
 			const connected = resp.data?.connected ?? []
 			const defaults = resp.data?.default ?? {}
 			const providers = (resp.data?.all ?? []).filter(p => connected.includes(p.id))
+			const activeIdx = ctx.values.provider
+				? providers.findIndex(p => p.id === ctx.values.provider)
+				: 0
 			if (providers.length) {
-				process.stdout.write(formatProviders(providers, defaults) + "\n")
+				process.stdout.write(formatProviders(providers, defaults, activeIdx) + "\n")
 			}
 			return
 		}
