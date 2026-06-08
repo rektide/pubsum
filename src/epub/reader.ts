@@ -18,7 +18,7 @@ export async function openEpub(filePath: string): Promise<EpubBook> {
 		spine: epub.getSpine(),
 		toc: epub.getToc(),
 		guide: epub.getGuide(),
-		pageList: epub.getPageList(),
+		pageList: epub.getPageList() ?? { label: "", pageTargets: [] },
 		loadChapter: (id: string) => epub.loadChapter(id),
 		destroy: () => epub.destroy(),
 	}

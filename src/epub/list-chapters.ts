@@ -30,7 +30,9 @@ function buildPageMap(pageList: PageList): Map<string, string[]> {
 
 export function listChapters(book: EpubBook): void {
 	const tocLabels = buildTocLabelMap(book.toc)
-	const pageMap = buildPageMap(book.pageList)
+	const pageMap = book.pageList?.pageTargets?.length
+		? buildPageMap(book.pageList)
+		: new Map<string, string[]>()
 
 	for (let i = 0; i < book.spine.length; i++) {
 		const spineItem = book.spine[i]
