@@ -14,6 +14,10 @@ type Extensions = {
 	epub: EpubExtension
 }
 
+function formatNumber(n: number): string {
+	return n.toLocaleString()
+}
+
 const mainCommand = define<{
 	extensions: Extensions
 }>({
@@ -45,8 +49,17 @@ const mainCommand = define<{
 			return
 		}
 
-		const response = ctx.extensions[opencodePluginId].response
-		process.stdout.write(response)
+		const ext = ctx.extensions[opencodePluginId]
+		process.stdout.write(ext.response)
+
+		if (ext.usage) {
+			const total = ext.usage.input + ext.usage.cacheRead
+			const limit = ext.contextLimit
+			const pct = limit > 0 ? ((total / limit) * 100).toFixed(1) : "?"
+			process.stderr.write(
+				`\nTokens: ${formatNumber(ext.usage.input)} in / ${formatNumber(ext.usage.output)} out / ${formatNumber(ext.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(limit)} (${pct}%)\n`
+			)
+		}
 	},
 })
 

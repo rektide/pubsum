@@ -6,6 +6,14 @@ import type { ModelExtension } from "./model.ts"
 
 export const pluginId = "opencode" as const
 
+export interface TokenUsage {
+	input: number
+	output: number
+	reasoning: number
+	cacheRead: number
+	cacheWrite: number
+}
+
 type DependencyExtensions = {
 	[epubPluginId]: EpubExtension
 	[modelPluginId]: ModelExtension
@@ -13,6 +21,8 @@ type DependencyExtensions = {
 
 export interface OpencodeExtension {
 	response: string
+	usage: TokenUsage | null
+	contextLimit: number
 }
 
 export default function opencodePlugin() {
@@ -21,10 +31,10 @@ export default function opencodePlugin() {
 		dependencies: [epubPluginId, modelPluginId],
 		extension: async ctx => {
 			const html = ctx.extensions[epubPluginId].html
+			const { client, providerID, modelID, contextLimit } = ctx.extensions[modelPluginId]
 			if (!html) {
-				return { client: ctx.extensions[modelPluginId].client, response: "" }
+				return { client, response: "", usage: null, contextLimit }
 			}
-			const { client, providerID, modelID } = ctx.extensions[modelPluginId]
 
 			const session = await client.session.create()
 			const sessionId = session.data?.id
@@ -54,7 +64,20 @@ export default function opencodePlugin() {
 				.map(p => ("text" in p ? String(p.text) : ""))
 				.join("\n") ?? ""
 
-			return { response }
+			const messages = await client.session.messages({ path: { id: sessionId } })
+			const usage: TokenUsage = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
+			for (const msg of messages.data ?? []) {
+				if (msg.info.role === "assistant" && "tokens" in msg.info) {
+					const t = (msg.info as { tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number } } }).tokens
+					usage.input += t.input
+					usage.output += t.output
+					usage.reasoning += t.reasoning
+					usage.cacheRead += t.cache.read
+					usage.cacheWrite += t.cache.write
+				}
+			}
+
+			return { response, usage, contextLimit }
 		},
 	})
 }

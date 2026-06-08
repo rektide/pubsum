@@ -8,6 +8,7 @@ export interface ModelExtension {
 	client: OpencodeClient
 	providerID: string
 	modelID: string
+	contextLimit: number
 }
 
 function pad(str: string, len: number, char = " "): string {
@@ -158,6 +159,7 @@ export default function modelPlugin() {
 				client,
 				providerID: provider.id,
 				modelID: model.id,
+				contextLimit: model.limit.context,
 			}
 		},
 	})
