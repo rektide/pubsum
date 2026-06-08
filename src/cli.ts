@@ -118,13 +118,11 @@ const mainCommand = define<{
 					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err)
-					if (msg.toLowerCase().includes("context") || msg.toLowerCase().includes("token") || msg.toLowerCase().includes("length") || msg.toLowerCase().includes("limit") || msg.toLowerCase().includes("overflow") || msg.toLowerCase().includes("exceed")) {
-						process.stderr.write(`\n  Context overflow (${msg.slice(0, 200)}), rotating session\n`)
-						oc.resetSession()
-						result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
-					} else {
-						throw err
-					}
+					const stack = err instanceof Error ? err.stack : ""
+					process.stderr.write(`\n  ERROR: ${msg}\n  ${stack}\n`)
+					oc.resetSession()
+					process.stderr.write(`  Retrying in new session...\n`)
+					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
 				}
 
 				const entry = result.response + "\n\n"
