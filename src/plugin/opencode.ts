@@ -102,18 +102,22 @@ export default function opencodePlugin() {
 					return { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
 				}
 				const messages = await client.session.messages({ path: { id: sessionId } })
-				const usage: TokenUsage = { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
+				let lastInput = 0
+				let totalOutput = 0
+				let totalReasoning = 0
+				let lastCacheRead = 0
+				let lastCacheWrite = 0
 				for (const msg of messages.data ?? []) {
 					if (msg.info.role === "assistant" && "tokens" in msg.info) {
 						const t = (msg.info as { tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number } } }).tokens
-						usage.input += t.input
-						usage.output += t.output
-						usage.reasoning += t.reasoning
-						usage.cacheRead += t.cache.read
-						usage.cacheWrite += t.cache.write
+						lastInput = t.input
+						totalOutput += t.output
+						totalReasoning += t.reasoning
+						lastCacheRead = t.cache.read
+						lastCacheWrite = t.cache.write
 					}
 				}
-				return usage
+				return { input: lastInput, output: totalOutput, reasoning: totalReasoning, cacheRead: lastCacheRead, cacheWrite: lastCacheWrite }
 			}
 
 			return { contextLimit, sessionId, summarize, getSessionUsage, resetSession: () => { sessionId = null } }
