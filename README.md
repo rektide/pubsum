@@ -1,6 +1,6 @@
 # sum-pub
 
-Summarize epub chapters using opencode.
+Summarize epub chapters using opencode. Each chapter's summary is fed back as context for the next, so the LLM maintains narrative continuity across the whole book. Output appends to a markdown file, building a running chapter-by-chapter summary.
 
 ## usage
 
@@ -16,7 +16,7 @@ node src/sum-pub.ts -f book.epub -c 5,7,9
 node src/sum-pub.ts -f book.epub -c 5-12 -o summaries.md
 
 # choose provider and model
-node src/sum-pub.ts -f book.epub -c 5 -p zai-coding-plan -M glm-5.1
+node src/sum-pub.ts -f book.epub -c 5 -p openrouter -M deepseek/deepseek-v4-pro
 
 # set a proactive context limit for session rotation
 node src/sum-pub.ts -f book.epub -c 5-20 -L 40000 -o summaries.md
