@@ -36,10 +36,24 @@ export default function opencodePlugin() {
 	return plugin<DependencyExtensions, typeof pluginId, [typeof epubPluginId, typeof modelPluginId], OpencodeExtension>({
 		id: pluginId,
 		dependencies: [epubPluginId, modelPluginId],
+		setup: ctx => {
+			ctx.addGlobalOption("session", {
+				type: "string",
+				short: "s",
+				description: "Resume existing session ID",
+			})
+			ctx.addGlobalOption("preseed", {
+				type: "boolean",
+				short: "P",
+				description: "Include existing summary when resuming session",
+			})
+		},
 		extension: async ctx => {
 			const { client, providerID, modelID, contextLimit } = ctx.extensions[modelPluginId]
+			const resumeSessionId = ctx.values.session as string | undefined
+			const preseed = ctx.values.preseed as boolean | undefined
 
-			let sessionId: string | null = null
+			let sessionId: string | null = resumeSessionId ?? null
 
 			const ensureSession = async (): Promise<string> => {
 				if (sessionId) return sessionId
@@ -48,14 +62,19 @@ export default function opencodePlugin() {
 				if (!sessionId) {
 					throw new Error("Failed to create session")
 				}
+				process.stderr.write(`Session: ${sessionId}\n`)
 				return sessionId
+			}
+
+			if (resumeSessionId) {
+				process.stderr.write(`Session: ${sessionId} (resumed)\n`)
 			}
 
 			const summarize = async (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string): Promise<SummarizeResult> => {
 				const sid = await ensureSession()
 
 				let prompt = ""
-				if (existingSummary) {
+				if (existingSummary && (!resumeSessionId || preseed)) {
 					prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
 				}
 				prompt += `Summarize the following chapter content. This is chapter ${chapterOrdinal} (${chapterTitle}). Use "## Chapter ${chapterOrdinal}" as the heading. Do not include any other commentary.\n\n${html}`
