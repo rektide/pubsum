@@ -29,6 +29,7 @@ export interface OpencodeExtension {
 	sessionId: string | null
 	summarize: (html: string, chapterTitle: string, existingSummary: string) => Promise<SummarizeResult>
 	getSessionUsage: () => Promise<TokenUsage>
+	resetSession: () => void
 }
 
 export default function opencodePlugin() {
@@ -96,7 +97,7 @@ export default function opencodePlugin() {
 				return usage
 			}
 
-			return { contextLimit, sessionId, summarize, getSessionUsage }
+			return { contextLimit, sessionId, summarize, getSessionUsage, resetSession: () => { sessionId = null } }
 		},
 	})
 }

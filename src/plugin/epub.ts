@@ -38,6 +38,11 @@ export default function epubPlugin() {
 				short: "o",
 				description: "Append summaries to markdown file",
 			})
+			ctx.addGlobalOption("contextLimit", {
+				type: "number",
+				short: "L",
+				description: "Token limit before session rotation (default: 40000)",
+			})
 		},
 		extension: async ctx => {
 			const file = ctx.values.file as string | undefined

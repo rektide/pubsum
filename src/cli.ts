@@ -92,11 +92,19 @@ const mainCommand = define<{
 
 		const ordinals = parseOrdinals(chaptersArg)
 		let inMemorySummary = epub.existingSummary
+		const contextLimit = (ctx.values.contextLimit as number | undefined) ?? 40000
 
-		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")}\n`)
+		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${formatNumber(contextLimit)} tokens\n`)
 
 		try {
 			for (const ordinal of ordinals) {
+				const usageBefore = await oc.getSessionUsage()
+				const totalBefore = usageBefore.input + usageBefore.cacheRead
+				if (totalBefore >= contextLimit) {
+					process.stderr.write(`\n  Context limit reached (${formatNumber(totalBefore)} / ${formatNumber(contextLimit)}), rotating session\n`)
+					oc.resetSession()
+				}
+
 				process.stderr.write(`\nChapter ${ordinal}... `)
 
 				const chapter = await epub.loadChapter(ordinal)
@@ -114,10 +122,9 @@ const mainCommand = define<{
 
 				if (result.usage) {
 					const total = result.usage.input + result.usage.cacheRead
-					const limit = oc.contextLimit
-					const pct = limit > 0 ? ((total / limit) * 100).toFixed(1) : "?"
+					const pct = contextLimit > 0 ? ((total / contextLimit) * 100).toFixed(1) : "?"
 					process.stderr.write(
-						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(limit)} (${pct}%)`
+						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(contextLimit)} (${pct}%)`
 					)
 				}
 				process.stderr.write("\n")
