@@ -92,7 +92,8 @@ const mainCommand = define<{
 
 		const ordinals = parseOrdinals(chaptersArg)
 		let inMemorySummary = epub.existingSummary
-		const contextLimit = (ctx.values.contextLimit as number | undefined) ?? 40000
+		const userLimit = ctx.values.contextLimit as number | undefined
+		const contextLimit = userLimit ?? oc.contextLimit
 
 		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${formatNumber(contextLimit)} tokens\n`)
 
@@ -108,7 +109,20 @@ const mainCommand = define<{
 				process.stderr.write(`\nChapter ${ordinal}... `)
 
 				const chapter = await epub.loadChapter(ordinal)
-				const result = await oc.summarize(chapter.html, chapter.title, inMemorySummary)
+
+				let result
+				try {
+					result = await oc.summarize(chapter.html, chapter.title, inMemorySummary)
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err)
+					if (msg.toLowerCase().includes("context") || msg.toLowerCase().includes("token") || msg.toLowerCase().includes("length") || msg.toLowerCase().includes("limit")) {
+						process.stderr.write(`\n  Context overflow (${msg}), rotating session\n`)
+						oc.resetSession()
+						result = await oc.summarize(chapter.html, chapter.title, inMemorySummary)
+					} else {
+						throw err
+					}
+				}
 
 				const entry = result.response + "\n\n"
 				inMemorySummary += entry
