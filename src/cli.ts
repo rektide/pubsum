@@ -93,17 +93,20 @@ const mainCommand = define<{
 		const ordinals = parseOrdinals(chaptersArg)
 		let inMemorySummary = epub.existingSummary
 		const userLimit = ctx.values.contextLimit as number | undefined
-		const contextLimit = userLimit ?? oc.contextLimit
+		const noProactiveLimit = userLimit == null || userLimit === 0
+		const contextLimit = noProactiveLimit ? Infinity : userLimit
 
-		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${formatNumber(contextLimit)} tokens\n`)
+		process.stderr.write(`${epub.bookTitle} — ${ordinals.length} chapter(s): ${ordinals.join(", ")} | limit: ${noProactiveLimit ? "none (reactive only)" : formatNumber(contextLimit) + " tokens"}\n`)
 
 		try {
 			for (const ordinal of ordinals) {
-				const usageBefore = await oc.getSessionUsage()
-				const totalBefore = usageBefore.input + usageBefore.cacheRead
-				if (totalBefore >= contextLimit) {
-					process.stderr.write(`\n  Context limit reached (${formatNumber(totalBefore)} / ${formatNumber(contextLimit)}), rotating session\n`)
-					oc.resetSession()
+				if (!noProactiveLimit) {
+					const usageBefore = await oc.getSessionUsage()
+					const totalBefore = usageBefore.input + usageBefore.cacheRead
+					if (totalBefore >= contextLimit) {
+						process.stderr.write(`\n  Context limit reached (${formatNumber(totalBefore)} / ${formatNumber(contextLimit)}), rotating session\n`)
+						oc.resetSession()
+					}
 				}
 
 				process.stderr.write(`\nChapter ${ordinal}... `)
@@ -112,13 +115,13 @@ const mainCommand = define<{
 
 				let result
 				try {
-					result = await oc.summarize(chapter.html, chapter.title, inMemorySummary)
+					result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err)
-					if (msg.toLowerCase().includes("context") || msg.toLowerCase().includes("token") || msg.toLowerCase().includes("length") || msg.toLowerCase().includes("limit")) {
-						process.stderr.write(`\n  Context overflow (${msg}), rotating session\n`)
+					if (msg.toLowerCase().includes("context") || msg.toLowerCase().includes("token") || msg.toLowerCase().includes("length") || msg.toLowerCase().includes("limit") || msg.toLowerCase().includes("overflow") || msg.toLowerCase().includes("exceed")) {
+						process.stderr.write(`\n  Context overflow (${msg.slice(0, 200)}), rotating session\n`)
 						oc.resetSession()
-						result = await oc.summarize(chapter.html, chapter.title, inMemorySummary)
+						result = await oc.summarize(chapter.html, chapter.title, ordinal, inMemorySummary)
 					} else {
 						throw err
 					}
@@ -136,9 +139,10 @@ const mainCommand = define<{
 
 				if (result.usage) {
 					const total = result.usage.input + result.usage.cacheRead
-					const pct = contextLimit > 0 ? ((total / contextLimit) * 100).toFixed(1) : "?"
+					const limitDisplay = noProactiveLimit ? oc.contextLimit : contextLimit
+					const pct = limitDisplay > 0 && limitDisplay !== Infinity ? ((total / limitDisplay) * 100).toFixed(1) : "?"
 					process.stderr.write(
-						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(contextLimit)} (${pct}%)`
+						` | Tokens: ${formatNumber(result.usage.input)} in / ${formatNumber(result.usage.output)} out / ${formatNumber(result.usage.cacheRead)} cache | Context: ${formatNumber(total)} / ${formatNumber(limitDisplay)} (${pct}%)`
 					)
 				}
 				process.stderr.write("\n")

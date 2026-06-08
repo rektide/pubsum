@@ -27,7 +27,7 @@ type DependencyExtensions = {
 export interface OpencodeExtension {
 	contextLimit: number
 	sessionId: string | null
-	summarize: (html: string, chapterTitle: string, existingSummary: string) => Promise<SummarizeResult>
+	summarize: (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string) => Promise<SummarizeResult>
 	getSessionUsage: () => Promise<TokenUsage>
 	resetSession: () => void
 }
@@ -51,14 +51,14 @@ export default function opencodePlugin() {
 				return sessionId
 			}
 
-			const summarize = async (html: string, chapterTitle: string, existingSummary: string): Promise<SummarizeResult> => {
+			const summarize = async (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string): Promise<SummarizeResult> => {
 				const sid = await ensureSession()
 
 				let prompt = ""
 				if (existingSummary) {
 					prompt += `Here is a summary of the book so far. Continue in the same style and format (markdown with ## headings per chapter):\n\n${existingSummary}\n\n`
 				}
-				prompt += `Summarize the following chapter content. Use a ## heading with the chapter title. Do not include any other commentary.\n\n${html}`
+				prompt += `Summarize the following chapter content. This is chapter ${chapterOrdinal} (${chapterTitle}). Use "## Chapter ${chapterOrdinal}" as the heading. Do not include any other commentary.\n\n${html}`
 
 				const promptResponse = await client.session.prompt({
 					path: { id: sid },
