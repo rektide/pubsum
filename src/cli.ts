@@ -76,6 +76,20 @@ const mainCommand = define<{
 			return
 		}
 
+		if (ctx.values.listChapters) {
+			const epub = ctx.extensions[epubPluginId]
+			if (!epub.book) {
+				process.stderr.write("Error: --list-chapters requires -f <epub>\n")
+				process.exit(1)
+			}
+			for (let i = 0; i < epub.spineLength; i++) {
+				const spineItem = epub.book!.spine[i]
+				const title = spineItem.href?.split("/").pop()?.replace(/\.[^.]+$/, "") ?? `Chapter ${i + 1}`
+				process.stdout.write(`  ${i + 1}. ${title}\n`)
+			}
+			return
+		}
+
 		const epub = ctx.extensions[epubPluginId]
 		const oc = ctx.extensions[opencodePluginId]
 		const chaptersArg = ctx.values.chapters as string | undefined

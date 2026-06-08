@@ -43,6 +43,10 @@ export default function epubPlugin() {
 				short: "L",
 				description: "Token limit before session rotation (default: 40000)",
 			})
+			ctx.addGlobalOption("listChapters", {
+				type: "boolean",
+				description: "List chapters in the epub and exit",
+			})
 		},
 		extension: async ctx => {
 			const file = ctx.values.file as string | undefined
