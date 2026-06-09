@@ -1,6 +1,8 @@
 # sum-pub
 
-Summarize epub chapters using opencode. Each chapter's summary is fed back as context for the next, so the LLM maintains narrative continuity across the whole book. Output appends to a markdown file, building a running chapter-by-chapter summary.
+> Summarize an epub, chapter by chapter.
+
+Summarize an epub book, using opencode (this should probably be switched to acp or some-such). Each chapter's summary is fed back as context for the next, so the LLM maintains narrative continuity across the whole book even as sessions rotate. Output appends to a markdown file, building a running chapter-by-chapter summary.
 
 ## usage
 
@@ -36,18 +38,18 @@ node src/sum-pub.ts --list-models
 
 ## flags
 
-| flag | short | description |
-|------|-------|-------------|
-| `--file` | `-f` | epub file path |
-| `--chapters` | `-c` | chapter(s): single (`5`), range (`5-8`), or list (`5,6,7`) |
-| `--output` | `-o` | append summaries to markdown file |
-| `--provider` | `-p` | provider ID to use |
-| `--model` | `-M` | model ID to use |
-| `--context-limit` | `-L` | token limit before session rotation (default: none, reactive only) |
-| `--session` | `-s` | resume existing session ID |
-| `--preseed` | `-P` | include existing summary when resuming session |
-| `--list-providers` | `-l` | list connected providers and exit |
-| `--list-models` | `-m` | list models with context limits and cost |
+| flag               | short | description                                                        |
+| ------------------ | ----- | ------------------------------------------------------------------ |
+| `--file`           | `-f`  | epub file path                                                     |
+| `--chapters`       | `-c`  | chapter(s): single (`5`), range (`5-8`), or list (`5,6,7`)         |
+| `--output`         | `-o`  | append summaries to markdown file                                  |
+| `--provider`       | `-p`  | provider ID to use                                                 |
+| `--model`          | `-M`  | model ID to use                                                    |
+| `--context-limit`  | `-L`  | token limit before session rotation (default: none, reactive only) |
+| `--session`        | `-s`  | resume existing session ID                                         |
+| `--preseed`        | `-P`  | include existing summary when resuming session                     |
+| `--list-providers` | `-l`  | list connected providers and exit                                  |
+| `--list-models`    | `-m`  | list models with context limits and cost                           |
 
 ## how it works
 
@@ -58,6 +60,7 @@ Three gunshi plugins feed into a `SumPubState` loop:
 3. **opencode plugin** — creates an opencode session, sends chapter content for summarization, tracks token usage
 
 The main loop iterates through chapter ordinals. For each chapter:
+
 - load chapter HTML from the epub
 - send to opencode for summarization (seeded with accumulated summary so far)
 - detect compaction (if token count drops >50%, the session was auto-compacted — redo in fresh session)
