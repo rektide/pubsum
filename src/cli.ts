@@ -5,11 +5,11 @@ import opencodePlugin from "./plugin/opencode.ts"
 import { pluginId as opencodePluginId } from "./plugin/opencode.ts"
 import { pluginId as modelPluginId } from "./plugin/model.ts"
 import { pluginId as epubPluginId } from "./plugin/epub.ts"
-import { SumPubState } from "./sum-pub/state.ts"
+import { PubSumState } from "./state.ts"
 import { listChapters } from "./epub/list-chapters.ts"
-import type { OpencodeExtension } from "./plugin/opencode.ts"
-import type { EpubExtension } from "./plugin/epub.ts"
-import type { ModelExtension } from "./plugin/model.ts"
+import type { OpencodeExtension } from "./plugin/types.ts"
+import type { EpubExtension } from "./plugin/types.ts"
+import type { ModelExtension } from "./plugin/types.ts"
 
 type Extensions = {
 	[opencodePluginId]: OpencodeExtension
@@ -46,7 +46,7 @@ function parseOrdinals(input: string): number[] {
 const mainCommand = define<{
 	extensions: Extensions
 }>({
-	name: "sum-pub",
+	name: "pubsum",
 	description: "Summarize epub chapters using opencode",
 	toKebab: true,
 	run: async ctx => {
@@ -93,7 +93,7 @@ const mainCommand = define<{
 		const outputPath = ctx.values.output as string | undefined
 
 		if (!chaptersArg || !epub.book) {
-			process.stderr.write("Usage: sum-pub -f <epub> -c <chapters> [-o <output.md>]\n")
+			process.stderr.write("Usage: pubsum -f <epub> -c <chapters> [-o <output.md>]\n")
 			process.exit(1)
 		}
 
@@ -102,7 +102,7 @@ const mainCommand = define<{
 		const contextLimit = userLimit == null || userLimit === 0 ? Infinity : userLimit
 		const noLimit = contextLimit === Infinity
 
-		const state = new SumPubState(
+		const state = new PubSumState(
 			epub.bookTitle,
 			epub.existingSummary,
 			oc.sessionId,
@@ -130,7 +130,7 @@ const mainCommand = define<{
 
 export default async function main() {
 	await cli(process.argv.slice(2), mainCommand, {
-		name: "sum-pub",
+		name: "pubsum",
 		version: "0.1.0",
 		plugins: [epubPlugin(), modelPlugin(), opencodePlugin()],
 	})

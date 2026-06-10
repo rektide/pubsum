@@ -1,15 +1,8 @@
 import { initEpubFile } from "@lingo-reader/epub-parser"
-import type { EpubMetadata, EpubSpine, EpubToc, EpubGuide, PageList, EpubProcessedChapter } from "@lingo-reader/epub-parser"
+import type { EpubBook } from "./types.ts"
 
-export interface EpubBook {
-	metadata: EpubMetadata
-	spine: EpubSpine
-	toc: EpubToc
-	guide: EpubGuide
-	pageList: PageList
-	loadChapter: (id: string) => Promise<EpubProcessedChapter | undefined>
-	destroy: () => void
-}
+export type { EpubBook } from "./types.ts"
+export type { EpubToc, EpubGuide, PageList } from "@lingo-reader/epub-parser"
 
 export async function openEpub(filePath: string): Promise<EpubBook> {
 	const epub = await initEpubFile(filePath)

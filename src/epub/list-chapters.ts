@@ -1,4 +1,4 @@
-import type { EpubBook, EpubToc } from "./reader.ts"
+import type { EpubBook, EpubToc } from "./types.ts"
 import type { PageList } from "@lingo-reader/epub-parser"
 
 export function buildTocLabelMap(toc: EpubToc): Map<string, string> {

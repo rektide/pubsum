@@ -1,39 +1,18 @@
 import { plugin } from "gunshi/plugin"
 import { pluginId as epubPluginId } from "./epub.ts"
-import type { EpubExtension } from "./epub.ts"
+import type { EpubExtension } from "./types.ts"
 import { pluginId as modelPluginId } from "./model.ts"
-import type { ModelExtension } from "./model.ts"
+import type { ModelExtension } from "./types.ts"
 
 export const pluginId = "opencode" as const
-
-export interface TokenUsage {
-	input: number
-	output: number
-	reasoning: number
-	cacheRead: number
-	cacheWrite: number
-}
-
-export interface SummarizeResult {
-	response: string
-	usage: TokenUsage
-}
 
 type DependencyExtensions = {
 	[epubPluginId]: EpubExtension
 	[modelPluginId]: ModelExtension
 }
 
-export interface OpencodeExtension {
-	contextLimit: number
-	sessionId: string | null
-	summarize: (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string) => Promise<SummarizeResult>
-	getSessionUsage: () => Promise<TokenUsage>
-	resetSession: () => void
-}
-
 export default function opencodePlugin() {
-	return plugin<DependencyExtensions, typeof pluginId, [typeof epubPluginId, typeof modelPluginId], OpencodeExtension>({
+	return plugin<DependencyExtensions, typeof pluginId, [typeof epubPluginId, typeof modelPluginId], import("./types.ts").OpencodeExtension>({
 		id: pluginId,
 		dependencies: [epubPluginId, modelPluginId],
 		setup: ctx => {
@@ -76,7 +55,7 @@ export default function opencodePlugin() {
 				process.stderr.write(`Session: ${sessionId} (resumed)\n`)
 			}
 
-			const summarize = async (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string): Promise<SummarizeResult> => {
+			const summarize = async (html: string, chapterTitle: string, chapterOrdinal: number, existingSummary: string): Promise<import("./types.ts").SummarizeResult> => {
 				const sid = await ensureSession()
 
 			let prompt = ""
@@ -107,7 +86,7 @@ export default function opencodePlugin() {
 				return { response, usage }
 			}
 
-			const getSessionUsage = async (): Promise<TokenUsage> => {
+			const getSessionUsage = async (): Promise<import("./types.ts").TokenUsage> => {
 				if (!sessionId) {
 					return { input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 }
 				}

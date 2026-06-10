@@ -2,26 +2,9 @@ import { plugin } from "gunshi/plugin"
 import { readFile } from "node:fs/promises"
 import { openEpub } from "../epub/reader.ts"
 import { buildTocLabelMap } from "../epub/list-chapters.ts"
-import type { EpubBook, EpubToc, EpubGuide, PageList } from "../epub/reader.ts"
+import type { EpubExtension, ChapterContent } from "./types.ts"
 
 export const pluginId = "epub" as const
-
-export interface ChapterContent {
-	html: string
-	title: string
-}
-
-export interface EpubExtension {
-	book: EpubBook | null
-	bookTitle: string
-	existingSummary: string
-	spineLength: number
-	toc: EpubToc
-	guide: EpubGuide
-	pageList: PageList
-	loadChapter: (ordinal: number) => Promise<ChapterContent>
-	destroy: () => void
-}
 
 export default function epubPlugin() {
 	return plugin<{}, typeof pluginId, [], EpubExtension>({
